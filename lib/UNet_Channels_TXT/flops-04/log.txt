@@ -1,0 +1,31 @@
+[11.03.19 20:50:29] Args: {
+    "batch_size": 2,
+    "channel_txt": "save/flops/test/flops-03/pruned_channels.txt",
+    "epochs": null,
+    "flops_reg": 0.001,
+    "gpu": true,
+    "iters": 1500,
+    "load": "save/flops/test/flops-03/Finetuned.pth",
+    "lr": 0.1,
+    "prune_channels": 300,
+    "scale": 0.5,
+    "taylor_batches": 500
+}
+[11.03.19 20:50:29] Load split dataset
+[11.03.19 20:50:29] Built model using save/flops/test/flops-03/pruned_channels.txt...
+[11.03.19 20:50:31] Loading checkpoint from save/flops/test/flops-03/Finetuned.pth...
+[11.03.19 20:50:31] Evaluating Taylor criterion for 500 mini-batches
+[11.03.19 20:50:32] FLOPs before pruning: 
+[11059200, 92160000, 21196800, 80179200, 20044800, 47692800, 11520000, 23731200, 5688000, 5702400, 45734400, 12787200, 94003200, 20044800, 177868800, 41472000, 291225600, 191692800]
+[11.03.19 20:53:27] Finished computing Taylor criterion
+[11.03.19 20:53:28] Completed Pruning of 300 channels
+[11.03.19 20:53:28] Saving pruned to save/flops\test\flops-04\Pruned.pth...
+[11.03.19 20:53:28] Pruned channels to save/flops\test\flops-04\pruned_channels.txt...
+[11.03.19 20:53:28] Re-Built model using save/flops\test\flops-04\pruned_channels.txt...
+[11.03.19 20:53:28] Re-Loaded checkpoint from save/flops\test\flops-04\Pruned.pth...
+[11.03.19 20:53:28] FLOPs after pruning: 
+[11059200, 81100800, 21196800, 66355200, 17049600, 45158400, 10656000, 21196800, 5040000, 5256000, 39859200, 11865600, 87321600, 18432000, 160358400, 37785600, 280166400, 147456000]
+[11.03.19 21:01:14] Finished finetuning
+[11.03.19 21:01:14] Finetuned loss: 0.03259239122172263
+[11.03.19 21:01:14] Saving finetuned to save/flops\test\flops-04\Finetuned.pth...
+[11.03.19 21:02:36] Validation Dice Coeff: 0.9566126349638766
