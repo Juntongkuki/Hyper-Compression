@@ -16,9 +16,7 @@ def get_args():
     parser.add_argument('--loss_max', type=float, default=0.001, help='The maximum loss per layer')
     parser.add_argument('--loss_threshold', type=float, default=0.001, help='The expected loss per layer')
     parser.add_argument('--num_cores', type=int, default=1, help='The number of multithreaded threads')
-    parser.add_argument('--set_loss_limit', type=int, default=True,
-                        help='If the loss of a layer exceeds this limit, the original parameters will be saved directly to prevent significant impact on model performance')
-
+    parser.add_argument('--stop_threshold', type=float, default=[True, 0.006], help='You can set a threshold so that when the compression loss of the current layer is greater than the threshold, the original parameters of the current layer will be directly saved, which may better maintain the performance of the model, but will reduce the compression multiple')
     return parser.parse_args()
 
 
@@ -46,7 +44,7 @@ if __name__ == '__main__':
     t1_start = time.perf_counter()
 
     size_result, model = compress_params(model, Save_CompressedResult_RootPath, args.rect_l, args.num_inner_list, args.class_max,
-                                         args.loss_max, args.loss_threshold, args.num_cores, args.set_loss_limit)
+                                         args.loss_max, args.loss_threshold, args.num_cores, args.stop_threshold)
     t1_end = time.perf_counter()
 
     torch.save(model.state_dict(), Save_BackParam_Path)

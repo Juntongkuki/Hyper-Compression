@@ -6,6 +6,7 @@ import multiprocessing
 from .param_compress_new_uint_i import decompress_v3, compress_decom_v3, Save_Num_Zero, Decode_Params
 import torch
 import os
+import pickle
 
 
 def dummy_task():
@@ -95,38 +96,49 @@ def multi_compress_decom_v3(param,
                             root_dir,
                             class_max,
                             loss_max,
-                            loss_shredhold,
-                            set_loss_limit):
-    try:
-        if param.flatten().shape[0] >= 10:
-            """
-            results[0] : MAE_loss list
-            results[1] ：the best number of class
-            results[2] ：new parameters
-            results[3] : compressed results to be saved
-            results[4] : the number of sample nodes
-            results[5] : the number of inner nodes
-            results[6] : the number of outer nodes
-            results[7] : padding_size
-            results[9] : centroid_node
-            results[10] : farthest_node
-            """
+                            loss_hope,
+                            tensor_name,
+                            if_buffers,
+                            stop_threshold
+                            ):
 
-            results = compress_decom_v3(param,
-                                        num_ori,
-                                        rect_l,
-                                        num_inner_list,
-                                        class_max,
-                                        loss_max,
-                                        loss_shredhold)
+    if param.flatten().shape[0] >= 10 and if_buffers == False:
+        """
+        results[0] : MAE_loss list
+        results[1] ：the best number of class
+        results[2] ：new parameters
+        results[3] : compressed results to be saved
+        results[4] : the number of sample nodes
+        results[5] : the number of inner nodes
+        results[6] : the number of outer nodes
+        results[7] : padding_size
+        results[9] : centroid_node
+        results[10] : farthest_node
+        results[11] : LayerName2Param_each
+        """
+
+        results = compress_decom_v3(param, num_ori, rect_l, num_inner_list, class_max, loss_max, loss_hope)
+        mean_MAE = np.mean(results[0])
+
+        if stop_threshold[0] and mean_MAE > stop_threshold[1]:
+            new_param = param
+            mean_MAE = 0
+            max_loss = 0
+            min_loss = 0
+            max_index = 0
+            save_new_param_uncompress(root_dir, new_param, num_ori)
+            if_padding = 0
+            num_inner_index = 0
+            best_class = 0
+            center_node = np.array([0, 0], dtype=np.float32)
+            farthest_node = np.array([0, 0], dtype=np.float32)
+            print(f"The Number. {num_ori} Layer : Save the Original Parameters")
+
+        elif stop_threshold[0] and mean_MAE <= stop_threshold[1]:
             new_param = results[2]
-            mean_MAE = np.mean(results[0])
-            if set_loss_limit:
-                if mean_MAE > 0.006:
-                    print(1 / 0)
             max_loss = np.max(results[0])
             min_loss = np.min(results[0])
-            max_index = (results[4]+1) + results[1] * (results[4]+1)
+            max_index = (results[4] + 1) + results[1] * (results[4] + 1)
             if_padding = results[7]
             num_inner_index = results[8]
             best_class = results[1]
@@ -134,24 +146,37 @@ def multi_compress_decom_v3(param,
             farthest_node = results[10]
             save_new_param_compress(root_dir, results[3], num_ori, results[1], results[4], param.shape)
             print(f"The Number. {num_ori} Layer : Successful Compression")
-        else:
-            print(1/0)
 
-    except:
-        print(f"The Number. {num_ori} Layer : Save the Original Parameters")
+        elif not stop_threshold[0]:
+            new_param = results[2]
+            max_loss = np.max(results[0])
+            min_loss = np.min(results[0])
+            max_index = (results[4] + 1) + results[1] * (results[4] + 1)
+            if_padding = results[7]
+            num_inner_index = results[8]
+            best_class = results[1]
+            center_node = results[9]
+            farthest_node = results[10]
+            save_new_param_compress(root_dir, results[3], num_ori, results[1], results[4], param.shape)
+            print(f"The Number. {num_ori} Layer : Successful Compression")
+
+    else: # if param.flatten().shape[0] < 10 or it is a buffer, save directly
         new_param = param
         mean_MAE = 0
         max_loss = 0
         min_loss = 0
         max_index = 0
-        save_new_param_uncompress(root_dir, param, num_ori)
+        save_new_param_uncompress(root_dir, new_param, num_ori)
         if_padding = 0
         num_inner_index = 0
         best_class = 0
-        center_node = np.array([0,0], dtype=np.float32)
-        farthest_node = np.array([0,0], dtype=np.float32)
+        center_node = np.array([0, 0], dtype=np.float32)
+        farthest_node = np.array([0, 0], dtype=np.float32)
+        print(f"The Number. {num_ori} Layer : Save the Original Parameters")
 
-    return new_param, mean_MAE, max_index, if_padding, num_inner_index, best_class, center_node, farthest_node
+    LayerName2Param_each = [tensor_name, new_param]
+
+    return new_param, mean_MAE, max_index, if_padding, num_inner_index, best_class, center_node, farthest_node, LayerName2Param_each
 
 
 
@@ -163,7 +188,7 @@ def compress_params(model,
                     loss_max,
                     loss_shredhold,
                     num_cores,
-                    set_loss_limit):
+                    stop_threshold):
 
     root_dir = Save_CompressedResult_RootPath
 
@@ -173,15 +198,38 @@ def compress_params(model,
     else:
         os.makedirs(root_dir, exist_ok=True)
 
-    np.array([num_inner_list]).astype(np.uint64).tofile(root_dir+'num_inner_list.bin')
+    np.array([num_inner_list]).astype(np.uint64).tofile(root_dir + 'num_inner_list.bin')
 
-    params_list = list(model.parameters())
+    model_parameters_names = []
+    for name, tensor in model.named_parameters():
+        model_parameters_names.append(name)
+
+    layer_n = 0
+    LayerName2Param = {}
+    LayerName2Param_new = {}
+    params_list = []
+    if_buffers = []
+    for tensor_name, tensor in model.state_dict().items():
+        LayerName2Param[tensor_name] = layer_n
+        LayerName2Param_new[tensor_name] = None
+        params_list.append(tensor)
+        if tensor_name in model_parameters_names:
+            if_buffers.append(False)
+        else:
+            if_buffers.append(True)
+        layer_n += 1
+
+    Param2LayerName = {}
+    for name, i in LayerName2Param.items():
+        Param2LayerName[i] = name
+
+    with open(root_dir + 'LayerName2Param.bin', 'wb') as file:
+        pickle.dump(LayerName2Param, file)
 
     with multiprocessing.Pool(processes=num_cores) as pool:
         new_params_list_multi = pool.starmap(multi_compress_decom_v3,
                                         [[params_list[num_ori].data.cpu().numpy(), num_ori, rect_l, num_inner_list,
-                                          root_dir, class_max, loss_max, loss_shredhold, set_loss_limit] for num_ori in range(len(params_list))])
-
+                                          root_dir, class_max, loss_max, loss_shredhold, Param2LayerName[num_ori], if_buffers[num_ori], stop_threshold] for num_ori in range(len(params_list))])
 
 
     new_params_list = [t[0] for t in new_params_list_multi]
@@ -209,17 +257,21 @@ def compress_params(model,
     farthest_node_list = np.array([t[7] for t in new_params_list_multi])
     farthest_node_list.tofile(root_dir + 'farthest_node_list.bin')
 
+    LayerName2Param_new = {}
+    for item in new_params_list_multi:
+        LayerName2Param_new[item[8][0]] = item[8][1]
 
-    old_param = list(model.parameters())[0].detach().cpu().clone().numpy()
-    with torch.no_grad():
-        for i in tqdm(range(len(params_list))):
-            ori_param = params_list[i].data
-            new_param = new_params_list[i]
-            params_list[i].copy_(torch.tensor(new_param).float().cuda())
-    new_param = list(model.parameters())[0].detach().cpu().numpy()
+    state_dict = model.state_dict()
+    state_dict_new = LayerName2Param_new
+    l = []
+    for name, param in state_dict.items():
+        new_param = state_dict_new[name]  # new_param
+        origin_param = state_dict[name].numpy()
+        # print(np.mean(np.abs(new_param - origin_param)))
+        l.append(np.mean(np.abs(new_param - origin_param)))
+        state_dict_new[name] = torch.tensor(state_dict_new[name]).float().cuda()
 
-    if np.array_equal(old_param, new_param):
-       print("There is something wrong!")
+    model.load_state_dict(state_dict_new)
 
     compressed_size = get_folder_size(Save_CompressedResult_RootPath)
 

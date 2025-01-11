@@ -35,10 +35,17 @@ if __name__=='__main__':
     print("\n")
     print("#"*10 + " Let's Evaluate the model's performance with lossy parameters " + "#"*10)
 
-    model_params = list(model.parameters())
-    with torch.no_grad():
-        for i in range(len(decode_params_list)):
-            model_params[i].copy_(torch.tensor(decode_params_list[i]).float().cuda())
+    with open(Decode_Param_Path + '/Compressed_Dir/LayerName2Param.bin', "rb") as f:  # "rb" 表示以二进制读取模式打开文件
+        LayerName2Param_new = pickle.load(f)
+
+    state_dict = model.state_dict()
+    state_dict_new = LayerName2Param_new
+    for name, param in state_dict.items():
+        new_param = decode_params_list[state_dict_new[name]]  # new_param
+        origin_param = state_dict[name].numpy()
+        state_dict_new[name] = torch.tensor(new_param).float().cuda()
+
+    model.load_state_dict(state_dict_new)
 
     if args.gpu:
         model.cuda()
