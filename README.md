@@ -2,7 +2,7 @@
 
 ![Static Badge](https://img.shields.io/badge/Python-3.8%2B-brightgreen.svg) ![Static Badge](https://img.shields.io/badge/License-Apache--2.0-orange.svg) ![GitHub Repo stars](https://img.shields.io/github/stars/Juntongkuki/Hyper-Compression?style=flat&logo=github) 
 
-[📄[paper](https://arxiv.org/pdf/2409.00592)] [📍[Github](https://github.com/Juntongkuki/Hyper-Compression)]
+[📄[paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=11434864)] [📍[Github](https://github.com/Juntongkuki/Hyper-Compression)]
 
 
 ## News 📢 
