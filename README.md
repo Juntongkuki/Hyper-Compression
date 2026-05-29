@@ -4,6 +4,13 @@
 
 [📄[paper](https://arxiv.org/pdf/2409.00592)] [📍[Github](https://github.com/Juntongkuki/Hyper-Compression)]
 
+
+## News 📢 
+* **2026/05/29** : Following the revision of our paper, we have upgraded the relevant code. We will release the optimized code publicly in a timely manner. Thank you for your interest!😄
+* **2026/05/28** : Big day! 🥰 Our paper has been officially published in IEEE **TPAMI**! 🥰 A huge thank you to everyone for your support and interest in Hyper-Compression. 😄 Moreover, We welcome your continued support for our follow-up work, [**Birkhoff**](https://github.com/Juntongkuki/Birkhoff-Model-Compression.git).
+
+
+
 The **hyper-compression** uses a **hyperfunction** to represent the parameters of the target network, and notably, here the hyperfunction is designed per ergodic theory that relates to a problem: if a low-dimensional dynamic system can fill the high-dimensional space eventually.
 
 <div align="center">
